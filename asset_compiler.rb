@@ -10,14 +10,19 @@ require 'digest/md5'
 require 'net/http'
 require 'uri'
 require "yui/compressor"
-require 'pry'
+
 module Jekyll
 
 	class AssetGen < Generator
 		safe true
 		@@bundle_ext = ['.js', '.css']
 		@@bundle_hash = []
-
+		@@state = true
+		
+		def self.state
+			@@state
+		end
+		
 		def generate(site)
 			@files = {}
 			bundle = false
@@ -42,6 +47,8 @@ module Jekyll
 
 			if bundle
 				process_file( Dir.glob(bundle_dir + '/*'))
+			else
+				@@state = false
 			end
 
 		end # end of generate
@@ -110,11 +117,11 @@ module Jekyll
 
 			if f_ext.uniq.length > 1 && current_ext == f_ext.uniq[0]
 				puts "Aborting. There is js and css mixmax in #{f_name}. Please fix it first. "
+				@@state = false
 			elsif @@bundle_ext.include?(f_ext.uniq[0])
 
 				compressed = ""
 				file_arr.each do |f|
-								puts "process #{f} ... "
 	
 								if f =~ /^(https?:)?\/\//i
 								
@@ -128,6 +135,7 @@ module Jekyll
 										content = File.read(File.join(@src, f))
 									else
 										puts "#{f} not found. Aborting."
+										@@state = false
 										return
 									end
 								end
@@ -136,6 +144,8 @@ module Jekyll
 								compressed = compressed.concat(compressed_content)
 								rescue
 									puts "compression failed for #{f} ..."
+									@@state = false
+									return
 								end
 				end
 
@@ -145,14 +155,15 @@ module Jekyll
 				if bundle_file_hash == digest_content
 					puts "no change in #{f_name}"
 				else
-					puts "changes found , processing ..."
 					File.open(f_path,'w'){ |f|
+						puts "#{f_path} ... "
 						f.write(compressed)				
 					}
 				
 				end
 			else
 				puts "Aborting. Unsupported file in #{f_name} bundle list. Please fix it first"
+				@@state = false
 				return
 			end
 			
@@ -172,26 +183,23 @@ module Jekyll
       		src = context.registers[:site].source
       		includes = nodelist[0].split(',').map{|n| n.gsub(' ','')}
       		markup = ""
-      		includes.each do |i|
-      			bundled_name = "bundled_"+i
-      			b_path = src+'/bundles/bundled_'+i
-	      		if File.exists?(b_path)
-	      			puts "Linking #{b_path}"
-	      			ext = File.extname(b_path)
-	      			case ext
-	      			when ".js"
-	      				markup.concat("<script type='text/javascript' src='/bundles/#{bundled_name}'></script>")
-	      			when ".css"
-	      				markup.concat("<link href='/bundles/#{bundled_name}' type='text/css' rel='stylesheet' />")
-	      			else
-	      				put "Invalid asset. #{b_path}"
-	      			end
+      		if AssetGen.state
+	      		includes.each do |i|
+	      			bundled_name = "bundled_"+i
+	      			b_path = src+'/bundles/bundled_'+i
 	      			
-	      		else
-	      			puts "#{i} not found."
+		      		if File.exists?(b_path)
+		      			ext = File.extname(b_path)
+		      			case ext
+		      			when ".js"
+		      				markup.concat("<script type='text/javascript' src='/bundles/#{bundled_name}'></script>")
+		      			when ".css"
+		      				markup.concat("<link href='/bundles/#{bundled_name}' type='text/css' rel='stylesheet' />")
+		      			end		      			
+		      		end
 	      		end
-      		end
-      		markup
+	      		markup
+	      	end
       		
       	end
 
