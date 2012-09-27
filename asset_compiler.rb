@@ -2,7 +2,7 @@
 # Jekyll Asset Compiler
 #
 # Author : Rohit Rox
-# Repo   : http://github.com/RohitRox/Jekyll-asset_compiler
+# Repo   : http://github.com/rohitrox/jekyll-asset_compiler
 # License: MIT, see LICENSE file
 #
 require 'yaml'
@@ -10,7 +10,7 @@ require 'digest/md5'
 require 'net/http'
 require 'uri'
 require "yui/compressor"
-
+require 'pry'
 module Jekyll
 
 	class AssetGen < Generator
@@ -115,6 +115,7 @@ module Jekyll
 				compressed = ""
 				file_arr.each do |f|
 								puts "process #{f} ... "
+	
 								if f =~ /^(https?:)?\/\//i
 								
 								f = "http:#{f}" if !$1
@@ -123,9 +124,12 @@ module Jekyll
 								content = (Net::HTTP.get(URI(f)))
 
 								else
-
-								content = File.read(File.join(@src, f))
-
+									if File.exists?(File.join(@src, f))
+										content = File.read(File.join(@src, f))
+									else
+										puts "#{f} not found. Aborting."
+										return
+									end
 								end
 								begin
 								compressed_content = compressor.compress(content)
@@ -138,7 +142,6 @@ module Jekyll
 				digest_content = Digest::SHA1.hexdigest(compressed)
 	
 				File.exists?(f_path) ? bundle_file_hash = Digest::SHA1.hexdigest(File.read(f_path)) : bundle_file_hash = ""
-
 				if bundle_file_hash == digest_content
 					puts "no change in #{f_name}"
 				else
