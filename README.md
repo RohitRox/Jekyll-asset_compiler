@@ -1,7 +1,7 @@
 Jekyll-asset_compiler
 =====================
 
-Jekyll-asset_compiler is a Jekyll Plugin for asset compilation
+Jekyll-asset_compiler is a Jekyll Plugin for asset compilation, compresses and compiles js and css assets.
 
 ## Usage
 Put this plugin in _plugin folder
