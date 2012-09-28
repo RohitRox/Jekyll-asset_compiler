@@ -16,15 +16,32 @@ module Jekyll
 	class AssetGen < Generator
 		safe true
 		@@bundle_ext = ['.js', '.css']
-		@@bundle_hash = []
+		@@bundle_file_hash = {}
 		@@state = true
+		@@setting = {'temp_path' => "/home/temp/"}
 		
+		def self.bundle_file_hash
+			@@bundle_file_hash
+		end
+
 		def self.state
 			@@state
+		end
+
+		def self.bundle_ext
+			@@bundle_ext
+		end
+		def self.state=(state)
+			@@state = state
+		end
+
+		def self.setting
+			@@setting
 		end
 		
 		def generate(site)
 			@files = {}
+			@site = site
 			bundle = false
 			@src = site.source
 			bundle_dir = @src + '/_bundles'
@@ -41,7 +58,6 @@ module Jekyll
 				
 				else
 					puts "Found "+Dir.glob(bundle_dir + '/*').size.to_s+" bundle file(s)"
-					FileUtils.mkdir_p(@src + '/bundles')
 					bundle = true
 				end
 
@@ -86,89 +102,14 @@ module Jekyll
 		      	bundles[f.split('/').last()] = assets
 		     end
 		     
-		     compile_assets(bundles)
+		    @@bundle_file_hash.merge!(bundles)
+			bundles.each do |k,v|
+				f_path = @site.source+'/_bundles/'+k.to_s	
+				@site.static_files << AssetFileGen.new(@site, f_path)
+			end
 
 		end # end of load_files
 
-		def compile_assets(bundles)
-			
-			bundles.each do |k,v|
-				f_name = k.to_s	
-				assefier(v, f_name)
-			end
-			puts "Asset bundler end."
-		end # end of compile_assets
-
-		def assefier(v, f_name)
-			f_path = @src+"/bundles/"+f_name
-			f_ext = File.extname(f_path)
-
-			if f_ext == ".js"
-				current_ext = ".js"
-				compressor = YUI::JavaScriptCompressor.new
-			elsif f_ext == '.css'
-				current_ext = ".css"
-				compressor = YUI::CssCompressor.new
-			end
-				
-			file_arr = v.split(' ')
-			f_ext = file_arr.map{ |f| File.extname(f) }
-
-			if f_ext.uniq.length > 1 && current_ext == f_ext.uniq[0]
-				puts "Aborting. There is js and css mixmax in #{f_name}. Please fix it first. "
-				@@state = false
-			elsif @@bundle_ext.include?(f_ext.uniq[0])
-
-				compressed = ""
-				file_arr.each do |f|
-	
-								if f =~ /^(https?:)?\/\//i
-								
-								f = "http:#{f}" if !$1
-								f.sub!( /^https/i, "http" ) if $1 =~ /^https/i
-								puts "Getting files from #{f} ... "
-								content = (Net::HTTP.get(URI(f)))
-
-								else
-									if File.exists?(File.join(@src, f))
-										content = File.read(File.join(@src, f))
-									else
-										puts "#{f} not found. Aborting."
-										@@state = false
-										return
-									end
-								end
-								begin
-								compressed_content = compressor.compress(content)
-								compressed = compressed.concat(compressed_content)
-								rescue
-									puts "compression failed for #{f} ..."
-									@@state = false
-									return
-								end
-				end
-
-				digest_content = Digest::SHA1.hexdigest(compressed)
-	
-				File.exists?(f_path) ? bundle_file_hash = Digest::SHA1.hexdigest(File.read(f_path)) : bundle_file_hash = ""
-				if bundle_file_hash == digest_content
-					puts "no change in #{f_name}"
-				else
-					File.open(f_path,'w'){ |f|
-						puts "#{f_path} ... "
-						f.write(compressed)				
-					}
-				
-				end
-			else
-				puts "Aborting. Unsupported file in #{f_name} bundle list. Please fix it first"
-				@@state = false
-				return
-			end
-			
-
-
-		end # end of assefier
 
 	end # end of AssetGen class
 
@@ -187,7 +128,6 @@ module Jekyll
 	      			bundled_name = i
 	      			b_path = src+'/bundles/'+i
 	      			
-		      		if File.exists?(b_path)
 		      			ext = File.extname(b_path)
 		      			case ext
 		      			when ".js"
@@ -195,12 +135,86 @@ module Jekyll
 		      			when ".css"
 		      				markup.concat("<link href='/bundles/#{bundled_name}' type='text/css' rel='stylesheet' />")
 		      			end		      			
-		      		end
+
 	      		end
 	      		markup
 	      	end
       		
       	end
+
+	end
+
+
+	class AssetFileGen < StaticFile
+
+		def initialize(site, file)
+			super(site, site.source, File.dirname(file), File.basename(file))
+			@src = site.source
+		end
+
+		def write(dest)
+			AssetGen.bundle_file_hash.each do |k, v|
+
+				f_ext = File.extname(k)
+
+				if f_ext == ".js"
+					current_ext = ".js"
+					compressor = YUI::JavaScriptCompressor.new
+				elsif f_ext == '.css'
+					current_ext = ".css"
+					compressor = YUI::CssCompressor.new
+				end
+
+				file_arr = v.split(' ')
+		
+				f_ext_coll = file_arr.map{ |f| File.extname(f) }
+				if f_ext_coll.uniq.length > 1 && current_ext == f_ext_coll.uniq[0]
+					puts "Aborting. There is js and css mixmax in #{k}. Please fix it first. "
+					AssetGen.state = false
+				elsif AssetGen.bundle_ext.include?(f_ext_coll.uniq[0])
+					compressed = ""
+					file_arr.each do |f|
+		
+									if f =~ /^(https?:)?\/\//i
+									
+										f = "http:#{f}" if !$1
+										f.sub!( /^https/i, "http" ) if $1 =~ /^https/i
+										puts "Getting files from #{f} ... "
+										content = (Net::HTTP.get(URI(f)))
+
+									else
+										if File.exists?(File.join(@src, f))
+											content = File.read(File.join(@src, f))
+										else
+											puts "#{f} not found. Aborting."
+											AssetGen.state = false
+											return
+										end
+									end
+									begin
+									compressed_content = compressor.compress(content)
+									compressed = compressed.concat(compressed_content)
+									FileUtils.mkdir_p(dest + '/bundles')
+									File.open(dest+'/bundles/'+k,'w'){ |f| f.write(compressed)}
+									rescue
+										puts "compression failed for #{f} ..."
+										AssetGen.state = false
+										return
+									end
+									
+									
+									
+					end
+				else
+					puts "Aborting. Unsupported file in #{k} bundle list. Please fix it first"
+					AssetGen.state = false
+					return
+				end
+
+			end
+
+			true
+		end
 
 	end
 
