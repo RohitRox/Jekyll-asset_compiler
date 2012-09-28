@@ -6,7 +6,6 @@
 # License: MIT, see LICENSE file
 #
 require 'yaml'
-require 'digest/md5'
 require 'net/http'
 require 'uri'
 require "yui/compressor"
