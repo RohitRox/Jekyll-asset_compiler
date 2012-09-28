@@ -18,7 +18,6 @@ module Jekyll
 		@@bundle_ext = ['.js', '.css']
 		@@bundle_file_hash = {}
 		@@state = true
-		@@setting = {'temp_path' => "/home/temp/"}
 		
 		def self.bundle_file_hash
 			@@bundle_file_hash
@@ -33,10 +32,6 @@ module Jekyll
 		end
 		def self.state=(state)
 			@@state = state
-		end
-
-		def self.setting
-			@@setting
 		end
 		
 		def generate(site)
