@@ -5,20 +5,20 @@ Jekyll-asset_compiler is a Jekyll Plugin for asset compilation, compresses and c
 
 ## Usage
 Put this plugin in _plugin folder
-Define your bundle files  put it _bundle folder
+Define your bundle files  put it _bundles folder
 ```
   jekyll-site
   |
   | _plugin | asset_compiler.rb
-  | _bundle | bundle_home.js
-            | bundle_stylesheet.css
+  | _bundles | bundle_home.js
+             | bundle_stylesheet.css
   | css | common.css
         | styles.css
   | js  | base.js
   
 ```
 Make sure you have bundle initial.
-Next, Add required files as
+Next, Add required files by giving their path
 
 Inside bundle_home.js
 
@@ -35,10 +35,9 @@ Inside bundle_stylesheet.css
 To include required bundle in your file just add
 
 ```
-  {% asset %}home.js, stylesheet.css{% endasset %}
+  {% asset %}bundle_home.js, bundle_stylesheet.css{% endasset %}
 ```
-Not that you will only have to specify like home.js for bundle_home.js and likewise.
-Compiled files will be generated at bundles directory inside _site and link will be automatically added.
+Compiled files will be generated at bundles directory inside _site and link will be automatically added by.
 
 ## Dependencies
-Uses the yui-compressor, make sure you have yui-compressor gem successfully installed
+Uses the yui-compressor, make sure you have yui-compressor gem successfully installed.

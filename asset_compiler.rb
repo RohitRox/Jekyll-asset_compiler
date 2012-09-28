@@ -27,7 +27,7 @@ module Jekyll
 			@files = {}
 			bundle = false
 			@src = site.source
-			bundle_dir = @src + '/_bundle'
+			bundle_dir = @src + '/_bundles'
 			puts "Asset Bundler"
 
 				if Dir.glob(bundle_dir).empty?
@@ -94,14 +94,13 @@ module Jekyll
 			
 			bundles.each do |k,v|
 				f_name = k.to_s	
-				f_path = @src+"/bundles/"+f_name.gsub('bundle', "bundled")
 				assefier(v, f_name)
 			end
 			puts "Asset bundler end."
 		end # end of compile_assets
 
 		def assefier(v, f_name)
-			f_path = @src+"/bundles/"+f_name.gsub('bundle', "bundled")
+			f_path = @src+"/bundles/"+f_name
 			f_ext = File.extname(f_path)
 
 			if f_ext == ".js"
@@ -185,8 +184,8 @@ module Jekyll
       		markup = ""
       		if AssetGen.state
 	      		includes.each do |i|
-	      			bundled_name = "bundled_"+i
-	      			b_path = src+'/bundles/bundled_'+i
+	      			bundled_name = i
+	      			b_path = src+'/bundles/'+i
 	      			
 		      		if File.exists?(b_path)
 		      			ext = File.extname(b_path)
